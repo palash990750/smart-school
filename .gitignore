@@ -1,0 +1,59 @@
+.env
+.env.*
+!.env.example
+
+node_modules/
+.next/
+.vercel/
+*.dump
+database-backups/
+backup-old-pages/
+hybrid-backup-*/
+hybrid-ui-backup-*/
+offline-migration-backup-*/
+api-client-repair-*/
+shell-fix-*/
+offline-app/
+offline-dist/
+*.apk
+*.tsbuildinfo
+reset-postgres-password.bat
+nul
+cd
+
+# Local Windows / Android / Electron distribution
+/android/
+/electron/
+/offline-app/
+/offline-dist/
+*.apk
+start.bat
+stop.bat
+WINDOWS-SETUP.txt
+vite.offline.config.ts
+capacitor.config.ts
+capacitor.config.before-offline.ts
+index.html
+*.tsbuildinfo
+reset-postgres-password.bat
+
+# Local backups and temporary repair folders
+/database-backups/
+/backup-old-pages/
+/hybrid-backup-*/
+/hybrid-ui-backup-*/
+/offline-migration-backup-*/
+/api-client-repair-*/
+/shell-fix-*/
+
+# Local-only stray files
+/nul
+/cd
+
+# Student and user uploaded private files
+students/
+documents/
+
+
+# Never publish runtime uploads or private user files
+/public/uploads/

@@ -1,0 +1,470 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  PRINCIPAL
+  VICE_PRINCIPAL
+  TEACHER
+  ACCOUNTANT
+  RECEPTIONIST
+  LIBRARIAN
+  TRANSPORT_MANAGER
+  DRIVER
+  STUDENT
+  PARENT
+  STAFF
+}
+
+enum SessionStatus {
+  ACTIVE
+  CLOSED
+}
+
+enum StudentStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  HALF_DAY
+  LEAVE
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  CARD
+  BANK_TRANSFER
+  CHEQUE
+  ONLINE
+}
+
+model User {
+  id            String     @id @default(cuid())
+  name          String?
+  email         String     @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  role          UserRole   @default(STAFF)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  accounts      Account[]
+  sessions      Session[]
+  payments      Payment[]  @relation("RecordedPayments")
+  expenses      Expense[]  @relation("CreatedExpenses")
+  auditLogs     AuditLog[]
+
+  @@index([role])
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+model AcademicSession {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  startDate   DateTime      @db.Date
+  endDate     DateTime      @db.Date
+  status      SessionStatus @default(ACTIVE)
+  isCurrent   Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  classes     SchoolClass[]
+  enrollments Enrollment[]
+  attendance  Attendance[]
+  feeCharges  FeeCharge[]
+  payments    Payment[]
+  expenses    Expense[]
+  exams       Exam[]
+}
+model SchoolSettings {
+  id         String   @id @default("school")
+  schoolName String
+  schoolCode String   @default("SCHOOL")
+  address    String   @default("")
+  city       String   @default("")
+  state      String   @default("")
+  country    String   @default("")
+  phone      String   @default("")
+  email      String   @default("")
+  website    String   @default("")
+
+  logoUrl          String?
+  headSignatureUrl String?
+
+  updatedAt  DateTime @updatedAt
+}
+
+model SchoolClass {
+  id          String          @id @default(cuid())
+  name        String
+  capacity    Int             @default(30)
+  sessionId   String
+  createdAt   DateTime        @default(now())
+  session     AcademicSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  sections    Section[]
+  enrollments Enrollment[]
+  attendance  Attendance[]
+  exams       Exam[]
+  subjects    ClassSubject[]
+
+  @@unique([name, sessionId])
+  @@index([sessionId])
+}
+
+model Section {
+  id          String       @id @default(cuid())
+  name        String
+  capacity    Int          @default(30)
+  classId     String
+  class       SchoolClass  @relation(fields: [classId], references: [id], onDelete: Restrict)
+  enrollments Enrollment[]
+  attendance  Attendance[]
+  exams       Exam[]
+
+  @@unique([classId, name])
+  @@index([classId])
+}
+
+model Student {
+  id              String        @id @default(cuid())
+  admissionNumber String        @unique
+  firstName       String
+  lastName        String
+  dateOfBirth     DateTime?     @db.Date
+  gender          String?
+  email           String?
+  phone           String?
+  status          StudentStatus @default(ACTIVE)
+
+  // Detailed student information
+  photoUrl         String?
+  fatherName       String?
+  motherName       String?
+  fatherPhone      String?
+  motherPhone      String?
+  fatherOccupation String?
+  motherOccupation String?
+  bloodGroup       String?
+  address          String?
+  idNumber         String?
+  admissionDate    DateTime? @db.Date
+  previousSchool   String?
+  emergencyContact String?
+  medicalNotes     String?
+  parentName       String?
+  parentPhone      String?
+  parentId         String?
+  parent           Parent?   @relation(fields: [parentId], references: [id], onDelete: SetNull)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  enrollments Enrollment[]
+  attendance  Attendance[]
+  feeCharges  FeeCharge[]
+  payments    Payment[]
+  examResults ExamResult[]
+
+  @@index([status, lastName, firstName])
+}
+
+model Enrollment {
+  id         String          @id @default(cuid())
+  studentId  String
+  sessionId  String
+  classId    String
+  sectionId  String
+  rollNumber String?
+  student    Student         @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  session    AcademicSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  class      SchoolClass     @relation(fields: [classId], references: [id], onDelete: Restrict)
+  section    Section         @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+
+  examResults ExamResult[]
+
+  @@unique([studentId, sessionId])
+  @@index([classId, sectionId, sessionId])
+}
+
+model Teacher {
+  id          String   @id @default(cuid())
+  employeeId  String   @unique
+  name        String
+  designation String
+  email       String?
+  phone       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([name])
+}
+
+model Staff {
+  id          String    @id @default(cuid())
+  employeeId  String    @unique
+  name        String
+  department  String
+  designation String
+  phone       String?
+  address     String?
+  joiningDate DateTime? @db.Date
+  createdAt   DateTime  @default(now())
+
+  @@index([name])
+}
+
+model Attendance {
+  id        String           @id @default(cuid())
+  studentId String
+  sessionId String
+  classId   String
+  sectionId String
+  date      DateTime         @db.Date
+  status    AttendanceStatus
+  remarks   String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  student   Student          @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  session   AcademicSession  @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  class     SchoolClass      @relation(fields: [classId], references: [id], onDelete: Restrict)
+  section   Section          @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+
+  @@unique([studentId, date])
+  @@index([sessionId, classId, sectionId, date])
+}
+
+model FeeCharge {
+  id          String          @id @default(cuid())
+  studentId   String
+  sessionId   String
+  description String          @default("School fees")
+  amount      Decimal         @db.Decimal(12, 2)
+  dueDate     DateTime?       @db.Date
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  student     Student         @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  session     AcademicSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+
+  @@unique([studentId, sessionId])
+  @@index([sessionId])
+}
+
+model Payment {
+  id            String          @id @default(cuid())
+  receiptNumber String          @unique
+  studentId     String
+  sessionId     String
+  amount        Decimal         @db.Decimal(12, 2)
+  paidAt        DateTime        @default(now())
+  method        PaymentMethod
+  transactionId String?
+  recordedById  String?
+  createdAt     DateTime        @default(now())
+  student       Student         @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  session       AcademicSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  recordedBy    User?           @relation("RecordedPayments", fields: [recordedById], references: [id], onDelete: SetNull)
+
+  @@index([sessionId, paidAt])
+  @@index([studentId, sessionId])
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  sessionId   String
+  category    String
+  amount      Decimal         @db.Decimal(12, 2)
+  description String?
+  paidAt      DateTime        @default(now())
+  createdById String?
+  createdAt   DateTime        @default(now())
+  session     AcademicSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  createdBy   User?           @relation("CreatedExpenses", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([sessionId, paidAt])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorId     String?
+  action      String
+  module      String
+  recordId    String?
+  description String
+  createdAt   DateTime @default(now())
+  actor       User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([module, createdAt])
+  @@index([actorId, createdAt])
+}
+
+model Parent {
+  id String @id @default(cuid())
+
+  fatherName       String?
+  fatherPhone      String?
+  fatherOccupation String?
+
+  motherName       String?
+  motherPhone      String?
+  motherOccupation String?
+
+  guardianName     String?
+  guardianPhone    String?
+  guardianRelation String?
+
+  address          String?
+  emergencyContact String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  students Student[]
+
+  @@index([fatherPhone])
+  @@index([motherPhone])
+  @@index([guardianPhone])
+  @@index([fatherName, motherName])
+}
+
+model ClassSubject {
+  id              String   @id @default(cuid())
+  classId         String
+  name            String
+  code            String?
+  defaultMaxMarks Decimal  @default(100) @db.Decimal(8, 2)
+  defaultPassMarks Decimal @default(33) @db.Decimal(8, 2)
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  class SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, name])
+  @@index([classId, active])
+}
+
+model Exam {
+  id         String   @id @default(cuid())
+  name       String
+  examType   String   @default("TERM")
+  sessionId  String
+  classId    String
+  sectionId  String?
+  startDate  DateTime @db.Date
+  endDate    DateTime @db.Date
+  totalMarks Decimal  @default(100) @db.Decimal(8, 2)
+  status     String   @default("DRAFT")
+  remarks    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  session  AcademicSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  class    SchoolClass     @relation(fields: [classId], references: [id], onDelete: Restrict)
+  section  Section?        @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  subjects ExamSubject[]
+  routines ExamRoutine[]
+
+  @@index([sessionId, classId])
+  @@index([startDate, endDate])
+  @@index([status])
+}
+
+model ExamSubject {
+  id        String   @id @default(cuid())
+  examId    String
+  name      String
+  code      String?
+  maxMarks  Decimal  @default(100) @db.Decimal(8, 2)
+  passMarks Decimal  @default(33) @db.Decimal(8, 2)
+  createdAt DateTime @default(now())
+
+  exam     Exam          @relation(fields: [examId], references: [id], onDelete: Cascade)
+  results  ExamResult[]
+  routines ExamRoutine[]
+
+  @@unique([examId, name])
+  @@index([examId])
+}
+
+model ExamResult {
+  id            String   @id @default(cuid())
+  examSubjectId String
+  studentId     String
+  enrollmentId  String
+  marksObtained Decimal  @default(0) @db.Decimal(8, 2)
+  remarks       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  subject    ExamSubject @relation(fields: [examSubjectId], references: [id], onDelete: Cascade)
+  student    Student     @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  enrollment Enrollment  @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+
+  @@unique([examSubjectId, studentId])
+  @@index([studentId])
+  @@index([enrollmentId])
+}
+
+model ExamRoutine {
+  id            String   @id @default(cuid())
+  examId        String
+  examSubjectId String
+  examDate      DateTime @db.Date
+  startTime     String
+  endTime       String
+  room          String?
+  remarks       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  exam    Exam        @relation(fields: [examId], references: [id], onDelete: Cascade)
+  subject ExamSubject @relation(fields: [examSubjectId], references: [id], onDelete: Cascade)
+
+  @@unique([examId, examSubjectId, examDate])
+  @@index([examId])
+  @@index([examSubjectId])
+  @@index([examDate])
+}
+
