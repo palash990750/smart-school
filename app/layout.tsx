@@ -1,4 +1,4 @@
-
+﻿
 import type { Metadata, Viewport } from "next";
 import Providers from "./providers";
 import "../src/index.css";
@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   description:
     "A dependable workspace for the people who keep school moving.",
   applicationName: "Smart School",
+  icons: { icon: "/favicon.svg" },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
@@ -34,3 +35,4 @@ export default function RootLayout({
     </html>
   );
 }
+
